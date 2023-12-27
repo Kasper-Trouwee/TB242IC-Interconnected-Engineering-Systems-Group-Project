@@ -2,6 +2,9 @@ import socket
 import time
 
 def main():
+    """
+    Connects to a server, sends username and password, and receives and prints the server's response.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             # Connect to the server

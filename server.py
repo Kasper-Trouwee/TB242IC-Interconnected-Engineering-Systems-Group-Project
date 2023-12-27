@@ -1,8 +1,20 @@
 import socket
 import logging
 import json
+import logging
+import socket
 
 def authenticate(username, password):
+    """
+    Authenticates the user by checking if the provided username and password match any user in the authentication database.
+
+    Args:
+        username (str): The username to authenticate.
+        password (str): The password to authenticate.
+
+    Returns:
+        bool: True if the authentication is successful, False otherwise.
+    """
     users = json.load(open("authentication.json"))
     
     # loop every user
@@ -12,6 +24,15 @@ def authenticate(username, password):
     return False
 
 def handle_client(client_socket):
+    """
+    Handle a client connection by performing authentication.
+
+    Args:
+        client_socket (socket): The client socket object.
+
+    Returns:
+        None
+    """
     try:
         # Receive username
         username = client_socket.recv(1024).decode('utf-8')
@@ -36,6 +57,17 @@ def handle_client(client_socket):
         client_socket.close()
 
 def main():
+    """
+    Main function that starts the server and listens for incoming connections.
+
+    This function initializes a server socket, binds it to a specific address and port,
+    and listens for incoming connections. Once a connection is established, it calls
+    the handle_client function to handle the client's requests.
+
+    Raises:
+        socket.error: If there is an error with the socket.
+
+    """
     logging.basicConfig(level=logging.INFO)
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
