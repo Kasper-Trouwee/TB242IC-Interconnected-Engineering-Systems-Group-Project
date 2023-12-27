@@ -1,9 +1,15 @@
 import socket
 import logging
+import json
 
 def authenticate(username, password):
-    # Check if the provided username and password match the expected values
-    return username == "tpmdelft" and password == "jaffalaan5"
+    users = json.load(open("authentication.json"))
+    
+    # loop every user
+    for user in users:
+        if user["username"] == username and user["password"] == password:
+            return True
+    return False
 
 def handle_client(client_socket):
     try:
