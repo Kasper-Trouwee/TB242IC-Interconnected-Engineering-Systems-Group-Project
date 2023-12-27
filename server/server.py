@@ -2,7 +2,6 @@ import socket
 import logging
 import json
 import logging
-import socket
 
 def authenticate(username, password):
     """

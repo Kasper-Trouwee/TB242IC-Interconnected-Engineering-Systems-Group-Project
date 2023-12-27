@@ -1,5 +1,6 @@
 import socket
-import time
+
+from client.optionMenu import OptionMenu
 
 def main():
     """
@@ -22,6 +23,12 @@ def main():
             # Receive and print the server's response
             response = client_socket.recv(1024).decode('utf-8')
             print(f"Server response: {response}")
+            if response == "Authentication successful!":
+                menu = OptionMenu()
+                menu.choose_option()
+            else :
+                print("Exiting Program...")
+                exit(0)
 
     except ConnectionError as e:
         print(f"Connection error: {e}")
