@@ -1,10 +1,16 @@
 class OptionMenu:
+    
+    def __init__(self, client_socket):
+        self.client_socket = client_socket
+        pass
+    
     """
     Represents a menu of options for the user to choose from.
     """
 
     def logout(self):
         print("logout")
+        #exit(0)
 
     def download(self):
         print("download")
@@ -50,6 +56,8 @@ class OptionMenu:
                     "chatting": self.chatting
                 }
                 switch.get(option, lambda: print("Invalid option"))()
+                self.client_socket.send(str(option_num).encode('utf-8'))
+
                 break
             else:
                 print("Invalid option number. Please choose a valid option number.")

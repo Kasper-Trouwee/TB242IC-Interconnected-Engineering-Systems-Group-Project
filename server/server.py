@@ -46,6 +46,12 @@ def handle_client(client_socket):
             client_socket.send("Authentication successful!".encode('utf-8'))
         else:
             client_socket.send("Authentication failed!".encode('utf-8'))
+            
+        option = client_socket.recv(1024).decode('utf-8')
+        logging.info(f"Received option: {option}")
+
+        if option == 1:
+            logging.info("Client logging out")
 
     except socket.error as e:
         logging.error(f"Socket error: {e}")
