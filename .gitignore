@@ -1,0 +1,15 @@
+# VS Code
+.vscode/
+.vscode/*
+.vscode/*.json
+.vscode/*.code-workspace
+
+# Python
+*.pyc
+__pycache__/
+venv/
+env/
+*.env
+*.egg-info/
+dist/
+build/

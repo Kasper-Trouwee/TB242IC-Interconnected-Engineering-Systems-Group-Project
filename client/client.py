@@ -1,7 +1,12 @@
 import socket
-import time
+
+from optionMenu import OptionMenu
+
 
 def main():
+    """
+    Connects to a server, sends username and password, and receives and prints the server's response.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             # Connect to the server
@@ -19,6 +24,14 @@ def main():
             # Receive and print the server's response
             response = client_socket.recv(1024).decode('utf-8')
             print(f"Server response: {response}")
+            if response == "Authentication successful!":
+                menu = OptionMenu(client_socket, username)
+                menu.choose_option()
+                optionReturn = client_socket.recv(1024).decode('utf-8')
+                menu.receive_option(optionReturn)
+            else :
+                print("Exiting Program...")
+                exit(1)
 
     except ConnectionError as e:
         print(f"Connection error: {e}")
