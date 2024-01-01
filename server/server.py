@@ -3,6 +3,8 @@ import logging
 import json
 import logging
 
+from chatServer import ChatServer
+
 def authenticate(username, password):
     """
     Authenticates the user by checking if the provided username and password match any user in the authentication database.
@@ -49,14 +51,25 @@ def handle_client(client_socket):
             
         option = client_socket.recv(1024).decode('utf-8')
         logging.info(f"Received option: {option}")
-
-        if option == 1:
+        if option == "logout":
             logging.info("Client logging out")
+        elif option == "download":
+            logging.info("Client downloading")
+        elif option == "upload"	:
+            logging.info("Client uploading")
+        elif option == "batch download":
+            logging.info("Client batch downloading")
+        elif option == "chatting":
+            logging.info("Client chatting")
+            server = ChatServer('localhost', 8000)
+            client_socket.send("chatting".encode('utf-8'))
+            server.run()
+
+            
 
     except socket.error as e:
         logging.error(f"Socket error: {e}")
         client_socket.send("An error occurred during authentication.".encode('utf-8'))
-
     finally:
         # Close the connection
         client_socket.close()

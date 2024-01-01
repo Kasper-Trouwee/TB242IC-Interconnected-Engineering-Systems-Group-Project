@@ -1,7 +1,11 @@
+from chatClient import ChatClient
+
+
 class OptionMenu:
     
-    def __init__(self, client_socket):
+    def __init__(self, client_socket, username):
         self.client_socket = client_socket
+        self.username = username
         pass
     
     """
@@ -10,7 +14,6 @@ class OptionMenu:
 
     def logout(self):
         print("logout")
-        #exit(0)
 
     def download(self):
         print("download")
@@ -22,7 +25,23 @@ class OptionMenu:
         print("batch download")
 
     def chatting(self):
-        print("chatting")
+        # Server IP address and port
+        SERVER_IP = 'localhost'
+        SERVER_PORT = 8000
+        
+        # Create a UDP client instance
+        client = ChatClient(SERVER_IP, SERVER_PORT)
+        
+        while True:
+            # Get user input
+            message = input("Enter message: ")
+
+            # Send the message to the server
+            client.send_message(message, self.username)
+
+            # Receive response from the server
+            response = client.receive_response()
+            print(response)
 
     def choose_option(self):
         options = {
@@ -46,18 +65,20 @@ class OptionMenu:
 
             option_num = int(option_input)
             option = options.get(option_num)
+            
 
             if option:
-                switch = {
-                    "logout": self.logout,
-                    "download": self.download,
-                    "upload": self.upload,
-                    "batch download": self.batch_download,
-                    "chatting": self.chatting
-                }
-                switch.get(option, lambda: print("Invalid option"))()
-                self.client_socket.send(str(option_num).encode('utf-8'))
-
+                self.client_socket.send(option.encode('utf-8'))
                 break
             else:
                 print("Invalid option number. Please choose a valid option number.")
+                
+    def receive_option(self, option):
+        switch = {
+            "logout": self.logout,
+            "download": self.download,
+            "upload": self.upload,
+            "batch download": self.batch_download,
+            "chatting": self.chatting
+        }
+        switch.get(option, lambda: print("Invalid option"))()
