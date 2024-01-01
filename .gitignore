@@ -13,3 +13,6 @@ env/
 *.egg-info/
 dist/
 build/
+
+# Unnecessary Files
+chat_log/

@@ -1,5 +1,8 @@
 from email import message
 import socket
+import time
+import datetime
+import os
 
 class ChatServer:
     def __init__(self, address, port):
@@ -15,11 +18,20 @@ class ChatServer:
         data, addr = self.sock.recvfrom(1024)
         return data.decode(), addr
     
+
     def run(self):
         print('UDP chat server is running on {}:{}'.format(self.address, self.port))
         
         while True:
-            data, addr = self.receive_message()
-            print(data)
+            current_date = datetime.datetime.now().strftime("%Y-%m-%d")
             
-            self.send_message(data, addr)
+            data, addr = self.receive_message()
+            message = f"[{time.strftime('%H:%M:%S', time.localtime())}] {data}"
+            
+            file_path = os.path.join("chat_log", current_date + ".txt")
+            
+            with open(file_path, "a") as file:
+                file.write(message + "\n")
+            
+            self.send_message(message, addr)
+

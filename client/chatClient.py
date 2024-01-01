@@ -7,7 +7,7 @@ class ChatClient:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def send_message(self, message, username):
-        self.client_socket.sendto(f"({self.server_ip}, {self.server_port})[{username}]: {message}".encode(), (self.server_ip, self.server_port))
+        self.client_socket.sendto(f"[({self.server_ip}, {self.server_port}) {username}]: {message}".encode(), (self.server_ip, self.server_port))
 
     def receive_response(self):
         response, server_address = self.client_socket.recvfrom(1024)
