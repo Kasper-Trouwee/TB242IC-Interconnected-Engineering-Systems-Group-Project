@@ -1,7 +1,26 @@
 import socket
+from chatClient import ChatClient
 
 from optionMenu import OptionMenu
 
+
+def call_option(option, username):
+    if option == "logout":
+        print("logout")
+    elif option == "download":
+        print("download")
+    elif option == "upload":
+        print("upload")
+    elif option == "batch download":
+        print("batch download")
+    elif option == "chatting":
+        # Server IP address and port
+        SERVER_IP = 'localhost'
+        SERVER_PORT = 8000
+        
+        # Create a UDP client instance
+        client = ChatClient(SERVER_IP, SERVER_PORT, username)
+        client.run()
 
 def main():
     """
@@ -27,8 +46,9 @@ def main():
             if response == "Authentication successful!":
                 menu = OptionMenu(client_socket, username)
                 menu.choose_option()
-                optionReturn = client_socket.recv(1024).decode('utf-8')
-                menu.receive_option(optionReturn)
+                chosenOption = client_socket.recv(1024).decode('utf-8')
+                chosenOption = menu.receive_option(chosenOption)
+                call_option(chosenOption, username)
             else :
                 print("Exiting Program...")
                 exit(1)
