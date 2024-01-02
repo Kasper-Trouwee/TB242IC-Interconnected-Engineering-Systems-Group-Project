@@ -1,14 +1,23 @@
-from chatClient import ChatClient
-
-
 class OptionMenu:
-    
+    """
+    Represents a menu of options for a client.
+
+    Attributes:
+        client_socket (socket): The client socket used for communication.
+        username (str): The username of the client.
+    """
+
     def __init__(self, client_socket, username):
         self.client_socket = client_socket
         self.username = username
-        pass
 
     def choose_option(self):
+        """
+        Displays the available options and prompts the user to choose an option.
+
+        Returns:
+            None
+        """
         options = {
             1: "logout",
             2: "download",
@@ -30,15 +39,23 @@ class OptionMenu:
 
             option_num = int(option_input)
             option = options.get(option_num)
-            
 
             if option:
                 self.client_socket.send(option.encode('utf-8'))
                 break
             else:
                 print("Invalid option number. Please choose a valid option number.")
-                
+
     def receive_option(self, option):
+        """
+        Validates and returns the received option.
+
+        Args:
+            option (str): The received option.
+
+        Returns:
+            str: The validated option or "Invalid option" if the option is not valid.
+        """
         options = {
             "logout",
             "download",
