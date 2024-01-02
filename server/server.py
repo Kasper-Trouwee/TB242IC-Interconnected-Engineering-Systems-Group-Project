@@ -1,10 +1,11 @@
+from math import log
 import socket
 import logging
 import json
 import threading
-
+import signal
 from chatServer import ChatServer
-
+    
 def authenticate(username, password):
     """
     Authenticates the user by checking if the provided username and password match any user in the authentication database.
@@ -106,4 +107,5 @@ def main():
             logging.error(f"Socket error: {e}")
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal.SIG_DFL) # allows Ctrl-C to interrupt
     main()
