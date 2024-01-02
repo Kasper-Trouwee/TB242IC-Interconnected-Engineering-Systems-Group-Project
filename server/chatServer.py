@@ -52,6 +52,19 @@ class ChatServer:
         """
         for client in self.client_address:
             self.send_message(message, client)
+            
+    def send_log_data_to_client(self, addr, file_path):
+        """
+        Sends the contents of the log file to the client as individual lines.
+
+        Args:
+            addr (tuple): The address of the client to send the file data to.
+        """
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                lines = file.readlines()
+                for line in lines:
+                    self.send_message(line.strip(), addr)
 
     def run(self):
         """
@@ -64,18 +77,19 @@ class ChatServer:
 
             data, addr = self.receive_message()
 
-            if addr not in self.client_address:
-                self.client_address.append(addr)
-
             message = f"[{time.strftime('%H:%M:%S', time.localtime())}] {data}"
 
             file_path = os.path.join("chat_log", current_date + ".txt")
 
-            with open(file_path, "a") as file:
-                file.write(message + "\n")
+            if addr not in self.client_address:
+                self.client_address.append(addr) # Add client address to list of connected clients
+                self.send_log_data_to_client(addr, file_path) # Send log data to client
 
             self.send_message_to_all(message)  # Send message to all connected clients
-
+            
+            with open(file_path, "a") as file: # Append message to log file
+                file.write(message + "\n")
+                
             if "==Leaving Chatroom==" in data:
-                self.client_address.remove(addr)
+                self.client_address.remove(addr) # Remove client address from list of connected clients
 

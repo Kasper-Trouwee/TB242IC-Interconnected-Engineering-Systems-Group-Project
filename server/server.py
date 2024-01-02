@@ -5,7 +5,7 @@ import json
 import threading
 import signal
 from chatServer import ChatServer
-    
+
 def authenticate(username, password):
     """
     Authenticates the user by checking if the provided username and password match any user in the authentication database.
