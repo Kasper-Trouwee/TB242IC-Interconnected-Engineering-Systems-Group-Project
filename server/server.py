@@ -1,7 +1,7 @@
 import socket
 import logging
 import json
-import logging
+import threading
 
 from chatServer import ChatServer
 
@@ -61,11 +61,7 @@ def handle_client(client_socket):
             logging.info("Client batch downloading")
         elif option == "chatting":
             logging.info("Client chatting")
-            server = ChatServer('localhost', 8000)
             client_socket.send("chatting".encode('utf-8'))
-            server.run()
-
-            
 
     except socket.error as e:
         logging.error(f"Socket error: {e}")
@@ -93,13 +89,19 @@ def main():
     server_socket.listen(1)  # Listen for one incoming connection
 
     logging.info("Server listening on port 5555...")
+    
+    chat_tread = threading.Thread(target=ChatServer, args=('localhost', 8000))
+    chat_tread.start()
 
+    
     while True:
         try:
             client_socket, addr = server_socket.accept()
             logging.info(f"Accepted connection from {addr}")
 
-            handle_client(client_socket)
+            # Create a new thread for each client connection
+            client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+            client_thread.start()
 
         except socket.error as e:
             logging.error(f"Socket error: {e}")

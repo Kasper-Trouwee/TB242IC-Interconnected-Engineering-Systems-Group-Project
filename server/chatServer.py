@@ -10,6 +10,7 @@ class ChatServer:
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.address, self.port))
+        self.run()
     
     def send_message(self, message, addr):
         self.sock.sendto(message.encode(), addr)
