@@ -21,6 +21,7 @@ def call_option(option, username):
         # Create a UDP client instance
         client = ChatClient(SERVER_IP, SERVER_PORT, username)
         client.run()
+        del client
 
 def main():
     """

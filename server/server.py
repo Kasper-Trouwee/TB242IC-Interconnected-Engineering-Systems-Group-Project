@@ -92,7 +92,6 @@ def main():
     
     chat_tread = threading.Thread(target=ChatServer, args=('localhost', 8000))
     chat_tread.start()
-
     
     while True:
         try:
