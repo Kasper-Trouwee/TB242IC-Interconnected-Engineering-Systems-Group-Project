@@ -5,6 +5,16 @@ from optionMenu import OptionMenu
 
 
 def call_option(option, username):
+    """
+    Executes the specified option based on the user's input.
+
+    Parameters:
+    option (str): The option to execute.
+    username (str): The username of the client.
+
+    Returns:
+    None
+    """
     if option == "logout":
         print("logout")
     elif option == "download":

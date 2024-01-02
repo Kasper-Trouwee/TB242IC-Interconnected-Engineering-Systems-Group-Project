@@ -2,6 +2,25 @@ import socket
 import threading
 
 class ChatClient:
+    """
+    A class representing a chat client.
+
+    Attributes:
+        server_ip (str): The IP address of the chat server.
+        server_port (int): The port number of the chat server.
+        username (str): The username of the client.
+        client_socket (socket.socket): The socket object for communication with the server.
+        running (bool): Flag indicating whether the client is running.
+
+    Methods:
+        send_message: Sends a message to the chat server.
+        receive_response: Receives a response from the chat server.
+        close: Closes the client socket.
+        receive_thread: Thread function for receiving messages from the server.
+        input_thread: Thread function for reading user input and sending messages to the server.
+        run: Starts the client by creating and starting the receive and input threads.
+    """
+
     def __init__(self, server_ip, server_port, username):
         self.server_ip = server_ip
         self.server_port = server_port
