@@ -1,10 +1,10 @@
 import socket
 from chatClient import ChatClient
 
-from optionMenu import OptionMenu
+from menu import Menu
 
 
-def call_option(option, username):
+def call_chosen_option(option, username):
     """
     Executes the specified option based on the user's input.
 
@@ -55,11 +55,11 @@ def main():
             response = client_socket.recv(1024).decode('utf-8')
             print(f"Server response: {response}")
             if response == "Authentication successful!":
-                menu = OptionMenu(client_socket, username)
-                menu.choose_option()
-                chosenOption = client_socket.recv(1024).decode('utf-8')
-                chosenOption = menu.receive_option(chosenOption)
-                call_option(chosenOption, username)
+                menu = Menu()
+                chosenOption = menu.showMain()
+                client_socket.send(chosenOption.encode('utf-8'))
+                
+                call_chosen_option(chosenOption, username)
             else :
                 print("Exiting Program...")
                 exit(1)

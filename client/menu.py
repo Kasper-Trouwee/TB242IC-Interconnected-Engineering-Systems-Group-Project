@@ -18,15 +18,20 @@ class Menu:
         Returns:
             int: chosen option
         '''
-
-        print("Main menu:")
-        print("1. View files")
-        print("2. Download")
-        print("3. Upload")
-        print("4. Chat")
-        print("5. Logout\n")
-        UInput = input("Enter option (number): ")
         
+        options = { # Dictionary with all the options
+            1: "logout",
+            2: "download",
+            3: "upload",
+            4: "batch download",
+            5: "chatting"
+        }
+        
+        print("Main Menu: ")
+        for num, option in options.items(): # Print all the options
+            print(f"{num}. {option}")
+        
+        UInput = input("Enter option (number): ")
         # Check with a loop if the input is valid. 
         while(True):
             if(UInput.isnumeric() == False):
@@ -42,9 +47,10 @@ class Menu:
                 else:
                     break
        
-        return UInput
-    
+        return options.get(UInput)
 
+    # Op het moment niet gebruikt ivm mogelijke hoeveelheid parameters/variable die meegegeven moeten worden.
+    # Zie client.py call_chosen_option() voor de huidige gebruikte implementatie.
     def excOption(self, option):
         '''
         Executes a function based on the given argument.
