@@ -1,9 +1,9 @@
-from math import log
 import socket
 import logging
 import json
 import threading
 import signal
+import os
 from chatServer import ChatServer
 
 def authenticate(username, password):
@@ -25,6 +25,20 @@ def authenticate(username, password):
             return True
     return False
 
+def send_all_files(client_socket, files_directory):
+    files = os.listdir(files_directory)  # Get a list of file names
+    client_socket.send(str(len(files)).encode('utf-8'))  # Send the number of files
+
+    for file_name in files:
+        file_path = os.path.join(files_directory, file_name)
+        if os.path.isfile(file_path):  # Ensure it's a file
+            with open(file_path, 'rb') as file:
+                data = file.read()
+                client_socket.send(f"{file_name}:{len(data)}".encode('utf-8'))  # Send file name and size
+                status = client_socket.recv(1024)  # Wait for client to be ready
+                print(status.decode('utf-8'))
+                client_socket.send(data)  # Send file data
+
 def handle_client(client_socket):
     """
     Handle a client connection by performing authentication.
@@ -38,11 +52,11 @@ def handle_client(client_socket):
     try:
         # Receive username
         username = client_socket.recv(1024).decode('utf-8')
-        logging.info(f"Received username: {username}")
+        logging.info(f"Received username: {username} from {client_socket.getpeername()}")
 
         # Receive password
         password = client_socket.recv(1024).decode('utf-8')
-        logging.info(f"Received password: {password}")
+        logging.info(f"Received password: {password} from {client_socket.getpeername()}")
 
         # Authenticate
         if authenticate(username, password):
@@ -51,17 +65,21 @@ def handle_client(client_socket):
             client_socket.send("Authentication failed!".encode('utf-8'))
             
         option = client_socket.recv(1024).decode('utf-8')
-        logging.info(f"Received option: {option}")
+        logging.info(f"Received option: {option} from {client_socket.getpeername()}")
         if option == "logout":
-            logging.info("Client logging out")
+            logging.info(f"{client_socket.getpeername()} logging out")
+            return
         elif option == "download":
-            logging.info("Client downloading")
+            logging.info(f"{client_socket.getpeername()} downloading")
         elif option == "upload"	:
-            logging.info("Client uploading")
+            logging.info(f"{client_socket.getpeername()} uploading")
         elif option == "batch download":
-            logging.info("Client batch downloading")
+            logging.info(f"{client_socket.getpeername()} batch downloading")
+            current_directory = os.path.dirname(os.path.abspath(__file__))
+            files_directory = os.path.join(current_directory, 'files')
+            send_all_files(client_socket, files_directory)
         elif option == "chatting":
-            logging.info("Client chatting")
+            logging.info(f"{client_socket.getpeername()} chatting")
             client_socket.send("chatting".encode('utf-8'))
 
     except socket.error as e:
@@ -70,6 +88,7 @@ def handle_client(client_socket):
     finally:
         # Close the connection
         client_socket.close()
+
 
 def main():
     """
@@ -102,6 +121,8 @@ def main():
             # Create a new thread for each client connection
             client_thread = threading.Thread(target=handle_client, args=(client_socket,))
             client_thread.start()
+            client_thread.join()
+            logging.info(f"Closed connection from {addr}")
 
         except socket.error as e:
             logging.error(f"Socket error: {e}")

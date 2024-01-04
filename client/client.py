@@ -2,9 +2,10 @@ import socket
 from chatClient import ChatClient
 
 from menu import Menu
+import os
 
 
-def call_chosen_option(option, username):
+def call_chosen_option(option, client_socket, username):
     """
     Executes the specified option based on the user's input.
 
@@ -17,12 +18,13 @@ def call_chosen_option(option, username):
     """
     if option == "logout":
         print("logout")
+        exit(1)
     elif option == "download":
         print("download")
     elif option == "upload":
         print("upload")
     elif option == "batch download":
-        print("batch download")
+        batch_download(client_socket)
     elif option == "chatting":
         # Server IP address and port
         SERVER_IP = 'localhost'
@@ -32,6 +34,32 @@ def call_chosen_option(option, username):
         client = ChatClient(SERVER_IP, SERVER_PORT, username)
         client.run()
         del client
+        
+def batch_download(client_socket):
+    num_files = int(client_socket.recv(1024).decode('utf-8'))  # Get the number of files
+
+    print(f"Downloading {num_files} files...")
+
+    for _ in range(num_files):
+        file_info = client_socket.recv(1024).decode('utf-8')
+        file_name, file_size = file_info.split(':')
+        file_size = int(file_size)
+        client_socket.send("ready".encode('utf-8'))  # Tell the server we're ready to receive the file
+
+        # Ensure the client receives the entire file
+        data = b''
+        while len(data) < file_size:
+            packet = client_socket.recv(1024)
+            if not packet:
+                break
+            data += packet
+
+        file_path = os.path.join('files', file_name)  # Create the file path within the 'files' folder
+
+        with open(file_path, 'wb') as file:  # Write the file data to a new file
+            file.write(data)
+
+    print("All files have been downloaded.")
 
 def main():
     """
@@ -55,11 +83,11 @@ def main():
             response = client_socket.recv(1024).decode('utf-8')
             print(f"Server response: {response}")
             if response == "Authentication successful!":
-                menu = Menu()
-                chosenOption = menu.showMain()
-                client_socket.send(chosenOption.encode('utf-8'))
-                
-                call_chosen_option(chosenOption, username)
+                while True:
+                    menu = Menu()
+                    chosenOption = menu.showMain()
+                    client_socket.send(chosenOption.encode('utf-8'))
+                    call_chosen_option(chosenOption, client_socket, username)
             else :
                 print("Exiting Program...")
                 exit(1)
