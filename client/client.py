@@ -62,7 +62,8 @@ def batch_download(client_socket):
             file.write(data)
 
     print("All files have been downloaded.")
-    
+
+# Currently not used  
 def choose_files():
     print("File options")
     print("1. Local Files")
