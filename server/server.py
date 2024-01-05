@@ -76,7 +76,7 @@ def handle_client(client_socket):
         elif option == "batch download":
             logging.info(f"{client_socket.getpeername()} batch downloading")
             current_directory = os.path.dirname(os.path.abspath(__file__))
-            files_directory = os.path.join(current_directory, 'files')
+            files_directory = os.path.join(current_directory, 'server_files')
             send_all_files(client_socket, files_directory)
         elif option == "chatting":
             logging.info(f"{client_socket.getpeername()} chatting")

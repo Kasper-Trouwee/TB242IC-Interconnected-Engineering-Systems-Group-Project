@@ -21,8 +21,10 @@ def call_chosen_option(option, client_socket, username):
         exit(1)
     elif option == "download":
         print("download")
+        show_files("server")
     elif option == "upload":
         print("upload")
+        show_files("local")
     elif option == "batch download":
         batch_download(client_socket)
     elif option == "chatting":
@@ -54,12 +56,40 @@ def batch_download(client_socket):
                 break
             data += packet
 
-        file_path = os.path.join('files', file_name)  # Create the file path within the 'files' folder
+        file_path = os.path.join('local_files', file_name)  # Create the file path within the 'files' folder
 
         with open(file_path, 'wb') as file:  # Write the file data to a new file
             file.write(data)
 
     print("All files have been downloaded.")
+    
+def choose_files():
+    print("File options")
+    print("1. Local Files")
+    print("2. Server Files")
+
+    option = input("Enter 1 for Local Files or 2 for Server Files")
+
+    while option not in ['1', '2']:
+        print("Option is invalid. Enter 1 for Local Files or 2 for Server Files")
+        option = input("Enter 1 for Local Files or 2 for Server Files")
+
+    return "local" if option == "1" else "server"
+
+def show_files(option):
+    if option == 'local':
+        local_files_directory = "local_files"
+        print("Local Files:")
+        files = os.listdir(local_files_directory)
+        for filename in files:
+            print(filename)
+    elif option == 'server':
+        server_files_directory = os.path.join("..", "server", "server_files" )
+        full_path = os.path.abspath(server_files_directory)
+        print("Server Files:")
+        files = os.listdir(full_path)
+        for filename in files:
+            print(filename)
 
 def main():
     """
