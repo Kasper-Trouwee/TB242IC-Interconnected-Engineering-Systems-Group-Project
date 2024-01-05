@@ -82,15 +82,15 @@ def show_files(option):
         local_files_directory = "local_files"
         print("Local Files:")
         files = os.listdir(local_files_directory)
-        for filename in files:
-            print(filename)
+        for i, filename in enumerate(files):
+            print(f"{i+1}. {filename}")
     elif option == 'server':
         server_files_directory = os.path.join("..", "server", "server_files" )
         full_path = os.path.abspath(server_files_directory)
         print("Server Files:")
         files = os.listdir(full_path)
-        for filename in files:
-            print(filename)
+        for i, filename in enumerate(files):
+            print(f"{i+1}. {filename}")
 
 def main():
     """
