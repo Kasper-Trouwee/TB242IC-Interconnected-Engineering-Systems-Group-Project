@@ -67,7 +67,7 @@ def receive_file_data(client_socket):
 
         # Ensure the client receives the entire file
         if file_size == -1: # File is too large
-            print(f"File {file_name} is too large to recieve.")
+            logging.error(f"File {file_name} is too large to recieve.")
         else:
             data = b''
             while len(data) < file_size:
@@ -80,7 +80,7 @@ def receive_file_data(client_socket):
 
             with open(file_path, 'wb') as file:  # Write the file data to a new file
                 file.write(data)
-                print(f"{file_name} downloaded successfully.")
+                logging.info(f"{file_name} downloaded successfully.")
             
         client_socket.send("done".encode('utf-8'))  # Tell the server we're done receiving the file
 
@@ -124,7 +124,6 @@ def handle_client(client_socket):
             elif option == "upload":
                 logging.info(f"{client_socket.getpeername()} upload")
                 receive_file_data(client_socket)
-
             elif option == "batch download":
                 logging.info(f"{client_socket.getpeername()} batch downloading")
                 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -173,8 +172,6 @@ def main():
             # Create a new thread for each client connection
             client_thread = threading.Thread(target=handle_client, args=(client_socket,))
             client_thread.start()
-            client_thread.join()
-            logging.info(f"Closed connection from {addr}")
 
         except socket.error as e:
             logging.error(f"Socket error: {e}")

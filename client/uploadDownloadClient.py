@@ -24,6 +24,7 @@ class UploadDownloadClient:
 
         with open(file_path, 'wb') as file:  # Write the file data to a new file
             file.write(data)
+        self.client_socket.send("done".encode('utf-8'))  # Tell the server we're done to receive the file
 
     def upload_file(self, filename_local):
         print(f"Uploading {filename_local}...")
