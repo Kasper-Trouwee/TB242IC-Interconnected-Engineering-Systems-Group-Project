@@ -30,14 +30,43 @@ def send_all_files(client_socket, files_directory):
     client_socket.send(str(len(files)).encode('utf-8'))  # Send the number of files
 
     for file_name in files:
-        file_path = os.path.join(files_directory, file_name)
-        if os.path.isfile(file_path):  # Ensure it's a file
+        send_file_data(client_socket, files_directory, file_name)
+
+def send_file_data(client_socket, files_directory, file_name):
+    logging.info(f"Sending {file_name} to {client_socket.getpeername()}")
+    file_path = os.path.join(files_directory, file_name)
+    if os.path.isfile(file_path):  # Ensure it's a file
+        
+        file_size = os.path.getsize(file_path)
+        if file_size > 10 * 1024 * 1024:  # Check if file size is larger than 10MB
+            logging.error(f"File {file_name} is too large to send.")
+        else :
             with open(file_path, 'rb') as file:
                 data = file.read()
                 client_socket.send(f"{file_name}:{len(data)}".encode('utf-8'))  # Send file name and size
-                status = client_socket.recv(1024)  # Wait for client to be ready
-                print(status.decode('utf-8'))
+                status = client_socket.recv(1024).decode('utf-8')  # Wait for client to be ready
+                if status != "ready":
+                    logging.error(f"Client not ready: {status}")
+                    return
+                logging.info(status)
+
                 client_socket.send(data)  # Send file data
+
+                status = client_socket.recv(1024).decode('utf-8') # wait for client to be done
+                if status != "done":
+                    logging.error(f"Client not done: {status}")
+                    return
+                logging.info(status)
+
+def receive_file_data(client_socket, filename_local):
+    try:
+        file_data, _ = client_socket.recvfrom(1024)
+        file_path = os.path.join('server_files', filename_local)
+        with open(file_path, 'wb') as file:
+            file.write(file_data)
+        client_socket.send("File uploaded successfully.".encode('utf-8'))
+    except Exception as e:
+        client_socket.send(f"An error occurred during file upload: {str(e)}".encode('utf-8'))
 
 def handle_client(client_socket):
     """
@@ -63,24 +92,32 @@ def handle_client(client_socket):
             client_socket.send("Authentication successful!".encode('utf-8'))
         else:
             client_socket.send("Authentication failed!".encode('utf-8'))
-            
-        option = client_socket.recv(1024).decode('utf-8')
-        logging.info(f"Received option: {option} from {client_socket.getpeername()}")
-        if option == "logout":
-            logging.info(f"{client_socket.getpeername()} logging out")
             return
-        elif option == "download":
-            logging.info(f"{client_socket.getpeername()} downloading")
-        elif option == "upload"	:
-            logging.info(f"{client_socket.getpeername()} uploading")
-        elif option == "batch download":
-            logging.info(f"{client_socket.getpeername()} batch downloading")
-            current_directory = os.path.dirname(os.path.abspath(__file__))
-            files_directory = os.path.join(current_directory, 'server_files')
-            send_all_files(client_socket, files_directory)
-        elif option == "chatting":
-            logging.info(f"{client_socket.getpeername()} chatting")
-            client_socket.send("chatting".encode('utf-8'))
+        while True:
+            option = client_socket.recv(1024).decode('utf-8')
+            logging.info(f"Received option: {option} from {client_socket.getpeername()}")
+            if option == "logout":
+                logging.info(f"{client_socket.getpeername()} logging out")
+                return
+            elif option == "download":
+                logging.info(f"{client_socket.getpeername()} downloading")
+                filename_on_server = client_socket.recv(1024).decode('utf-8')
+                current_directory = os.path.dirname(os.path.abspath(__file__))
+                files_directory = os.path.join(current_directory, 'server_files')
+                send_file_data(client_socket,files_directory, filename_on_server)
+            elif option == "upload"	:
+                logging.info(f"{client_socket.getpeername()} uploading")
+                filename_local = client_socket.recv(1024).decode('utf-8')
+                receive_file_data(client_socket, filename_local)
+
+            elif option == "batch download":
+                logging.info(f"{client_socket.getpeername()} batch downloading")
+                current_directory = os.path.dirname(os.path.abspath(__file__))
+                files_directory = os.path.join(current_directory, 'server_files')
+                send_all_files(client_socket, files_directory)
+            elif option == "chatting":
+                logging.info(f"{client_socket.getpeername()} chatting")
+                client_socket.send("chatting".encode('utf-8'))
 
     except socket.error as e:
         logging.error(f"Socket error: {e}")

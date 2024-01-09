@@ -2,8 +2,7 @@ import socket
 from chatClient import ChatClient
 
 from menu import Menu
-import os
-
+from uploadDownloadClient import UploadDownloadClient
 
 def call_chosen_option(option, client_socket, username):
     """
@@ -16,17 +15,20 @@ def call_chosen_option(option, client_socket, username):
     Returns:
     None
     """
+    uploadDownloadClient = UploadDownloadClient(client_socket)
     if option == "logout":
         print("logout")
         exit(1)
     elif option == "download":
         print("download")
-        show_files("server")
+        file = uploadDownloadClient.choose_files("server")
+        uploadDownloadClient.download_file(file)
     elif option == "upload":
         print("upload")
-        show_files("local")
+        file = uploadDownloadClient.choose_files("local")
+        uploadDownloadClient.upload_file(file)
     elif option == "batch download":
-        batch_download(client_socket)
+        uploadDownloadClient.batch_download()
     elif option == "chatting":
         # Server IP address and port
         SERVER_IP = 'localhost'
@@ -36,61 +38,6 @@ def call_chosen_option(option, client_socket, username):
         client = ChatClient(SERVER_IP, SERVER_PORT, username)
         client.run()
         del client
-        
-def batch_download(client_socket):
-    num_files = int(client_socket.recv(1024).decode('utf-8'))  # Get the number of files
-
-    print(f"Downloading {num_files} files...")
-
-    for _ in range(num_files):
-        file_info = client_socket.recv(1024).decode('utf-8')
-        file_name, file_size = file_info.split(':')
-        file_size = int(file_size)
-        client_socket.send("ready".encode('utf-8'))  # Tell the server we're ready to receive the file
-
-        # Ensure the client receives the entire file
-        data = b''
-        while len(data) < file_size:
-            packet = client_socket.recv(1024)
-            if not packet:
-                break
-            data += packet
-
-        file_path = os.path.join('local_files', file_name)  # Create the file path within the 'files' folder
-
-        with open(file_path, 'wb') as file:  # Write the file data to a new file
-            file.write(data)
-
-    print("All files have been downloaded.")
-
-# Currently not used  
-def choose_files():
-    print("File options")
-    print("1. Local Files")
-    print("2. Server Files")
-
-    option = input("Enter 1 for Local Files or 2 for Server Files")
-
-    while option not in ['1', '2']:
-        print("Option is invalid. Enter 1 for Local Files or 2 for Server Files")
-        option = input("Enter 1 for Local Files or 2 for Server Files")
-
-    return "local" if option == "1" else "server"
-
-def show_files(option):
-    if option == 'local':
-        local_files_directory = "local_files"
-        print("Local Files:")
-        files = os.listdir(local_files_directory)
-        for i, filename in enumerate(files):
-            print(f"{i+1}. {filename}")
-    elif option == 'server':
-        server_files_directory = os.path.join("..", "server", "server_files" )
-        full_path = os.path.abspath(server_files_directory)
-        print("Server Files:")
-        files = os.listdir(full_path)
-        for i, filename in enumerate(files):
-            print(f"{i+1}. {filename}")
 
 def main():
     """
@@ -114,8 +61,8 @@ def main():
             response = client_socket.recv(1024).decode('utf-8')
             print(f"Server response: {response}")
             if response == "Authentication successful!":
+                menu = Menu()
                 while True:
-                    menu = Menu()
                     chosenOption = menu.showMain()
                     client_socket.send(chosenOption.encode('utf-8'))
                     call_chosen_option(chosenOption, client_socket, username)
