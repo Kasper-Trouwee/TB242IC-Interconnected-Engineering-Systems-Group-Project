@@ -26,37 +26,37 @@ def authenticate(username, password):
     return False
 
 def send_all_files(client_socket, files_directory):
-    files = os.listdir(files_directory)  # Get a list of file names
+    files = [file for file in os.listdir(files_directory) if not file.startswith('.')]  # Get a list of file names excluding files starting with "."
     client_socket.send(str(len(files)).encode('utf-8'))  # Send the number of files
 
     for file_name in files:
         send_file_data(client_socket, files_directory, file_name)
+    logging.info(f"All files sent to {client_socket.getpeername()}")
 
 def send_file_data(client_socket, files_directory, file_name):
     logging.info(f"Sending {file_name} to {client_socket.getpeername()}")
     file_path = os.path.join(files_directory, file_name)
     if os.path.isfile(file_path):  # Ensure it's a file
-        
         file_size = os.path.getsize(file_path)
         if file_size > 10 * 1024 * 1024:  # Check if file size is larger than 10MB
             logging.error(f"File {file_name} is too large to send.")
+            client_socket.send(f"{file_name}:{-1}".encode('utf-8'))  # Send file name and size
+            status = client_socket.recv(1024).decode('utf-8')  # Wait for client to be ready
         else :
             with open(file_path, 'rb') as file:
                 data = file.read()
                 client_socket.send(f"{file_name}:{len(data)}".encode('utf-8'))  # Send file name and size
+                
                 status = client_socket.recv(1024).decode('utf-8')  # Wait for client to be ready
-                if status != "ready":
+                if status == "ready":
+                    client_socket.send(data)  # Send file data
+                else:
                     logging.error(f"Client not ready: {status}")
                     return
-                logging.info(status)
 
-                client_socket.send(data)  # Send file data
-
-                status = client_socket.recv(1024).decode('utf-8') # wait for client to be done
-                if status != "done":
-                    logging.error(f"Client not done: {status}")
-                    return
-                logging.info(status)
+        status = client_socket.recv(1024).decode('utf-8') # wait for client to be done
+        if status != "done":
+            logging.error(f"Client not done: {status}")
 
 def receive_file_data(client_socket, filename_local):
     try:

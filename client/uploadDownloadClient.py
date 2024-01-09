@@ -1,4 +1,5 @@
 import os
+from time import sleep
 class UploadDownloadClient:
     def __init__(self, client_socket):
         self.client_socket = client_socket
@@ -60,19 +61,23 @@ class UploadDownloadClient:
             self.client_socket.send("ready".encode('utf-8'))  # Tell the server we're ready to receive the file
 
             # Ensure the client receives the entire file
-            data = b''
-            while len(data) < file_size:
-                packet = self.client_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
+            if file_size == -1: # File is too large
+                print(f"File {file_name} is too large to recieve.")
+            else:
+                data = b''
+                while len(data) < file_size:
+                    packet = self.client_socket.recv(1024)
+                    if not packet:
+                        break
+                    data += packet
 
-            file_path = os.path.join('local_files', file_name)  # Create the file path within the 'files' folder
+                file_path = os.path.join('local_files', file_name)  # Create the file path within the 'files' folder
 
-            with open(file_path, 'wb') as file:  # Write the file data to a new file
-                file.write(data)
-                print(f"{file_name} downloaded successfully.")
-                self.client_socket.send("done".encode('utf-8'))  # Tell the server we're done receiving the file
+                with open(file_path, 'wb') as file:  # Write the file data to a new file
+                    file.write(data)
+                    print(f"{file_name} downloaded successfully.")
+                
+            self.client_socket.send("done".encode('utf-8'))  # Tell the server we're done receiving the file
 
         print("All files have been downloaded.")
 
