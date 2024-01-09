@@ -1,5 +1,5 @@
 import os
-from time import sleep
+
 class UploadDownloadClient:
     def __init__(self, client_socket):
         self.client_socket = client_socket
@@ -26,8 +26,8 @@ class UploadDownloadClient:
             file.write(data)
 
     def upload_file(self, filename_local):
-        file_data = self.read_local_file(filename_local)
-        self.send_file_data(file_data)
+        print(f"Uploading {filename_local}...")
+        self.send_file_data(filename_local)
 
     def receive_file_data(self):
         data, _ = self.client_socket.recvfrom(1024)
@@ -44,9 +44,28 @@ class UploadDownloadClient:
         with open(local_file_path, 'rb') as file:
             return file.read()
 
-    def send_file_data(self, file_data):
-        self.client_socket.send(file_data)
-        print("File uploaded successfully.")
+    def send_file_data(self, file_name):
+        file_path = os.path.join('local_files', file_name)
+        if os.path.isfile(file_path):  # Ensure it's a file
+            file_size = os.path.getsize(file_path)
+            if file_size > 10 * 1024 * 1024:  # Check if file size is larger than 10MB
+                print(f"File {file_name} is too large to send.")
+                self.client_socket.send(f"{file_name}:{-1}".encode('utf-8'))  # Send file name and size
+                status = self.client_socket.recv(1024).decode('utf-8')  # Wait for client to be ready
+            else :
+                with open(file_path, 'rb') as file:
+                    data = file.read()
+                    self.client_socket.send(f"{file_name}:{len(data)}".encode('utf-8'))  # Send file name and size
+                    
+                    status = self.client_socket.recv(1024).decode('utf-8')  # Wait for client to be ready
+                    if status == "ready":
+                        self.client_socket.send(data)  # Send file data
+                    else:
+                        print(f"Client not ready: {status}")
+                        return
+
+            status = self.client_socket.recv(1024).decode('utf-8') # wait for client to be done
+            print("File uploaded successfully.")
 
     def batch_download(self):
         num_files = int(self.client_socket.recv(1024).decode('utf-8'))  # Get the number of files
@@ -94,7 +113,7 @@ class UploadDownloadClient:
             return self.show_files(full_path)
 
     def show_files(self, files_directory):
-        files = os.listdir(files_directory)
+        files = [filename for filename in os.listdir(files_directory) if not filename.startswith('.')]
         for i, filename in enumerate(files):
             print(f"{i+1}. {filename}")
         while True:
