@@ -1,0 +1,522 @@
+---
+title: "TextMiningBicYT"
+output: 
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+## Install Packages
+
+```{r setup}
+# Set the CRAN mirror:
+local({r <- getOption("repos")
+r["CRAN"] <- "https://cran.rstudio.com/"
+options(repos = r)})
+
+# Install the packages used in this tutorial:
+packages <- c("cld2", "quanteda", "seededlda", "sentimentr")
+
+for (i in packages) {
+    if(!require(i, character.only = TRUE)) {
+        install.packages(i, dependencies = TRUE)
+    }
+}
+```
+
+## Get Data
+
+```{r load data}
+bic_yt <- read.csv("youtube_comments_bic_cristal_19177.csv")
+bic_reddit <- read.csv("reddit_comments_bic_cristal_1000.csv")
+sailor_yt <- read.csv("youtube_comments_sailor_pro_gear_6793.csv")
+sailor_reddit <- read.csv("reddit_comments_sailor_pro_gear_1000.csv")
+
+
+# reviews <- rbind(
+#   data.frame(bic_yt),
+#   data.frame(bic_reddit),
+#   data.frame(sailor_yt),
+#   data.frame(sailor_reddit)
+# )
+```
+
+## Data Preparation
+Reddit and YouTube comments have multiple labels. Let us preprocess the data by removing missing rows of comments, keep English comments and remove non-ASCII characters. Note: current method is not scalable at all...
+
+
+```{r explore}
+str(bic_reddit)
+print("==========")
+str(sailor_reddit)
+print("==========")
+str(bic_yt)
+print("==========")
+str(sailor_yt)
+```
+### Reddit
+```{r preprocess}
+# Remove potential missing rows of comments
+bic_reddit <- bic_reddit[!is.na(bic_reddit$Comment.Body),] 
+
+# Only keep English comments
+bic_reddit$language <- cld2::detect_language(bic_reddit$Comment.Body) 
+bic_reddit <- bic_reddit[ which(bic_reddit$language %in% "en"), ] # Keep English rows
+
+# Remove non-ASCII characters
+bic_reddit$Comment.Body <- gsub("[^\x01-\x7F]", "", bic_reddit$Comment.Body)
+str(bic_reddit)
+
+print("=====")
+
+# Remove potential missing rows of comments
+sailor_reddit <- sailor_reddit[!is.na(sailor_reddit$Comment.Body),] 
+
+# Only keep English comments
+sailor_reddit$language <- cld2::detect_language(sailor_reddit$Comment.Body) 
+sailor_reddit <- sailor_reddit[ which(sailor_reddit$language %in% "en"), ] # Keep English rows
+
+# Remove non-ASCII characters
+sailor_reddit$Comment.Body <- gsub("[^\x01-\x7F]", "", sailor_reddit$Comment.Body)
+str(sailor_reddit)
+
+```
+
+### Youtube
+```{r}
+# Remove potential missing rows of comments
+bic_yt <- bic_yt[!is.na(bic_yt$text),] 
+
+# Only keep English comments
+bic_yt$language <- cld2::detect_language(bic_yt$text) 
+bic_yt <- bic_yt[ which(bic_yt$language %in% "en"), ] # Keep English rows
+
+# Remove non-ASCII characters
+bic_yt$text <- gsub("[^\x01-\x7F]", "", bic_yt$text)
+str(bic_yt)
+
+print("=====")
+
+# Remove potential missing rows of comments
+sailor_yt <- sailor_yt[!is.na(sailor_yt$text),] 
+
+# Only keep English comments
+sailor_yt$language <- cld2::detect_language(sailor_yt$text) 
+sailor_yt <- sailor_yt[ which(sailor_yt$language %in% "en"), ] # Keep English rows
+
+# Remove non-ASCII characters
+sailor_yt$text <- gsub("[^\x01-\x7F]", "", sailor_yt$text)
+str(sailor_yt)
+
+```
+
+### Combine Data
+Keep comment data and combine data for each pen. 
+```{r}
+bic_combined <- data.frame(c(bic_yt$text,bic_reddit$Comment.Body)) # Combine data
+names(bic_combined)[1] <- "text"                # Give column name
+bic_combined$id <- seq_len(nrow(bic_combined))  # Add id column
+bic_combined <- bic_combined[c("id", "text")]   # Swap columns around
+str(bic_combined)
+
+print("=====")
+
+sailor_combined <- data.frame(c(sailor_yt$text,sailor_reddit$Comment.Body))
+names(sailor_combined)[1] <- "text"
+sailor_combined$id <- seq_len(nrow(sailor_combined))
+sailor_combined <- sailor_combined[c("id", "text")]
+str(sailor_combined)
+```
+
+## Model Preparation
+Create corpus
+```{r creation of corpus}
+bic_corpus <- quanteda::corpus(bic_combined, 
+                           docid_field = "id",
+                           text_field = "text")
+
+sailor_corpus <- quanteda::corpus(sailor_combined, 
+                           docid_field = "id",
+                           text_field = "text")
+summary(bic_corpus,10)
+print("=====")
+summary(sailor_corpus,10)
+
+```
+
+Get sentiment score of each comment and add as variable.
+```{r sentimentr}
+quanteda::docvars(bic_corpus, field = "ave_sentiment") <- sentimentr::sentiment_by(sentimentr::get_sentences(bic_corpus))$ave_sentiment
+
+quanteda::docvars(sailor_corpus, field = "ave_sentiment") <- sentimentr::sentiment_by(sentimentr::get_sentences(sailor_corpus))$ave_sentiment
+
+summary(bic_corpus, 10)
+hist(quanteda::docvars(bic_corpus)$ave_sentiment)
+
+summary(sailor_corpus, 10)
+hist(quanteda::docvars(sailor_corpus)$ave_sentiment)
+```
+
+
+
+
+### Processing text in corpus
+
+Use quanteda and tokens for further processing. Remove unnecessary symbols.
+
+```{r feature tokenization}
+bic_tokens <- quanteda::tokens(bic_corpus, 
+                           what = "word", # text unit to extract
+                           remove_punct = TRUE,
+                           remove_symbols = TRUE,
+                           remove_numbers = TRUE,
+                           remove_url = TRUE,
+                           remove_separators = TRUE,
+                           split_hyphens = FALSE,
+                           split_tags = FALSE,
+                           include_docvars = TRUE,
+                           padding = FALSE,
+                           verbose = TRUE)
+
+sailor_tokens <- quanteda::tokens(sailor_corpus, 
+                           what = "word", # text unit to extract
+                           remove_punct = TRUE,
+                           remove_symbols = TRUE,
+                           remove_numbers = TRUE,
+                           remove_url = TRUE,
+                           remove_separators = TRUE,
+                           split_hyphens = FALSE,
+                           split_tags = FALSE,
+                           include_docvars = TRUE,
+                           padding = FALSE,
+                           verbose = TRUE)
+
+```
+
+
+Futher processing the data. 
+```{r process}
+bic_tokens <- quanteda::tokens_tolower(bic_tokens) # Convert all uppercase letter to lower 
+bic_tokens <- quanteda::tokens_remove(bic_tokens, pattern = stopwords("en")) # Remove English stop words.
+sailor_tokens <- quanteda::tokens_tolower(sailor_tokens)
+sailor_tokens <- quanteda::tokens_remove(sailor_tokens, pattern = stopwords("en"))
+
+bic_dfm <- quanteda::dfm(bic_tokens) # document-feature-matrix (dfm)
+bic_dfm <- dfm_trim(bic_dfm, min_termfreq = 5) # Remove infrequent used words.
+sailor_dfm <- quanteda::dfm(sailor_tokens) 
+sailor_dfm <- dfm_trim(sailor_dfm, min_termfreq = 5) 
+
+topfeatures(bic_dfm)
+topfeatures(sailor_dfm)
+print("=====")
+
+# Check for frequent undesireable words, like HTML tags.
+length_features <- data.frame(count = quanteda::topfeatures(bic_dfm, ncol(bic_dfm))) # create data frame 
+length_features$length <- nchar(rownames(length_features)) # extract token length
+length_features[ which(length_features$length %in% c(1, 2)), ] # filter on token length
+
+length_features <- data.frame(count = quanteda::topfeatures(sailor_dfm, ncol(sailor_dfm))) # create data frame 
+length_features$length <- nchar(rownames(length_features)) # extract token length
+length_features[ which(length_features$length %in% c(1, 2)), ] # filter on token length
+
+
+```
+No significant frequent undesireable words. So no need to remove any.
+
+```{r}
+# Print top 10 terms in the DFM
+topfeatures(bic_dfm, n = 10)
+
+# Bar plot of top 10 term frequencies
+top_terms <- topfeatures(bic_dfm, n = 10)
+barplot(top_terms, col = "lightblue", main = "Top 10 Term Frequencies", las = 2)
+
+```
+```{r}
+# Print top 10 terms in the DFM
+topfeatures(sailor_dfm, n = 10)
+
+# Bar plot of top 10 term frequencies
+top_terms <- topfeatures(sailor_dfm, n = 10)
+barplot(top_terms, col = "lightblue", main = "Top 10 Term Frequencies", las = 2)
+
+```
+
+
+## Training
+
+Training the model to output k topics.
+
+```{r topic model}
+bic_positive <- seededlda::textmodel_lda(bic_dfm[ docvars(bic_dfm)$ave_sentiment >= 0, ], k = 2)
+bic_negative <- seededlda::textmodel_lda(bic_dfm[ docvars(bic_dfm)$ave_sentiment < 0, ], k = 2)
+
+sailor_positive <- seededlda::textmodel_lda(sailor_dfm[ docvars(sailor_dfm)$ave_sentiment >= 0, ], k = 2)
+sailor_negative <- seededlda::textmodel_lda(sailor_dfm[ docvars(sailor_dfm)$ave_sentiment < 0, ], k = 2)
+```
+
+## Interpret and Evaluate Model
+
+### bic
+```{r}
+head(topics(bic_positive))
+head(topics(bic_negative))
+```
+
+```{r}
+table(topics(bic_positive))
+table(topics(bic_negative))
+```
+
+```{r}
+cbind(seededlda::terms(bic_positive, 10), 
+      seededlda::terms(bic_negative, 10))
+
+```
+
+### Sailor
+```{r}
+head(topics(sailor_positive))
+head(topics(sailor_negative))
+```
+
+```{r}
+table(topics(sailor_positive))
+table(topics(sailor_negative))
+```
+
+```{r}
+cbind(seededlda::terms(sailor_positive, 10), 
+      seededlda::terms(sailor_negative, 10))
+
+```
+## Improve model strats
+### Bic
+
+```{r}
+## Remove documents that contain less than x words
+bic_tokens_cln <- bic_tokens[ quanteda::ntoken(bic_tokens) >= 4 ]
+
+## Prepare the new dfm 
+dfm <- quanteda::dfm(bic_tokens_cln)
+dfm <- dfm_trim(dfm, min_termfreq = 4) #Remove infrequent words
+dfm <- dfm[ -which((rowSums(dfm)) %in% 0), ] #Remove empty documents
+
+dfm <- quanteda::dfm_replace(dfm, pattern = "pens", replacement = "pen") #Replace terms 
+dfm <- quanteda::dfm_replace(dfm, pattern = "pencils", replacement = "pencil") #Replace terms 
+dfm <- quanteda::dfm_remove(dfm, pattern = c("pen", "also", "can", "bic", "video", "just", "pencil", "birthday", "really")) #List delete terms
+
+#Adjust and train models
+bic_positive_new <- seededlda::textmodel_lda(dfm[ docvars(dfm)$ave_sentiment >= 0, ],
+                                                   k = 6,
+                                                   max_iter = 2000,
+                                                   alpha = 0.5,
+                                                   beta = 0.01) 
+
+bic_negative_new <- seededlda::textmodel_lda(dfm[ docvars(dfm)$ave_sentiment < 0, ],
+                                                   k = 6,
+                                                   max_iter = 2000,
+                                                   alpha = 0.5,
+                                                   beta = 0.01)
+
+# cbind(seededlda::terms(bic_positive_new,20), 
+#       seededlda::terms(bic_negative_new,20))
+seededlda::terms(bic_positive_new,20)
+seededlda::terms(bic_negative_new,20)
+```
+### Sailor
+```{r}
+## Remove documents that contain less than x words
+sailor_tokens_cln <- sailor_tokens[ quanteda::ntoken(sailor_tokens) >= 4 ]
+
+## Prepare the new dfm 
+dfm <- quanteda::dfm(sailor_tokens_cln)
+dfm <- dfm_trim(dfm, min_termfreq = 4) #Remove infrequent words
+dfm <- dfm[ -which((rowSums(dfm)) %in% 0), ] #Remove empty documents
+
+dfm <- quanteda::dfm_replace(dfm, pattern = "pens", replacement = "pen") #Replace terms 
+dfm <- quanteda::dfm_replace(dfm, pattern = "pencils", replacement = "pencil") #Replace terms 
+dfm <- quanteda::dfm_remove(dfm, pattern = c("pen", "also", "can", "sailor", "video", "just", "pencil", "oh")) #List delete terms
+
+#Adjust and train models
+sailor_positive_new <- seededlda::textmodel_lda(dfm[ docvars(dfm)$ave_sentiment >= 0, ],
+                                                   k = 6,
+                                                   max_iter = 2000,
+                                                   alpha = 0.5,
+                                                   beta = 0.01) 
+
+sailor_negative_new <- seededlda::textmodel_lda(dfm[ docvars(dfm)$ave_sentiment < 0, ],
+                                                   k = 6,
+                                                   max_iter = 2000,
+                                                   alpha = 0.5,
+                                                   beta = 0.01)
+
+seededlda::terms(sailor_positive_new,20)
+seededlda::terms(sailor_negative_new,20)
+```
+
+```{r lda-topic-correlation-heatmap-fixed, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(reshape2)
+
+# Use your LDA model here (e.g., sailor_positive_new or bic_negative_new)
+model <- sailor_positive_new
+
+# Get topic-word distribution matrix
+phi <- model$phi  # rows: topics, cols: words
+
+# Custom cosine similarity function
+cosine_similarity <- function(x) {
+  x <- as.matrix(x)
+  sim <- x %*% t(x)
+  norm <- sqrt(rowSums(x^2))
+  sim / outer(norm, norm)
+}
+
+# Compute topic similarity matrix
+topic_similarity <- cosine_similarity(phi)
+
+# Melt for plotting
+sim_df <- melt(topic_similarity)
+
+# Plot heatmap
+ggplot(sim_df, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",
+                       na.value = "red",
+                       midpoint = 0.5, limits = c(0, 1), name = "Cosine Similarity") +
+  labs(title = "Topic Similarity Heatmap Sailor Positive",
+       x = "Topic", y = "Topic") +
+  theme_minimal()
+
+# Optional: Average off-diagonal similarity
+avg_similarity <- mean(topic_similarity[lower.tri(topic_similarity)])
+cat("Average topic similarity (off-diagonal):", round(avg_similarity, 3), "\n")
+```
+
+
+
+
+
+## Analytics
+Descriptives
+
+```{r}
+# Extract sentiment scores
+bic_sentiment <- quanteda::docvars(bic_corpus, "ave_sentiment")
+sailor_sentiment <- quanteda::docvars(sailor_corpus, "ave_sentiment")
+
+summary(bic_sentiment)
+print("=======")
+summary(sailor_sentiment)
+```
+
+Combining all sentiments and label them by branded pen. 
+```{r}
+# Combine sentiment scores and label them
+bic_sentiment <- data.frame(sentiment = quanteda::docvars(bic_corpus, "ave_sentiment"),
+                            pen = "Bic")
+sailor_sentiment <- data.frame(sentiment = quanteda::docvars(sailor_corpus, "ave_sentiment"),
+                               pen = "Sailor")
+
+sentiment_df <- rbind(bic_sentiment, sailor_sentiment)
+```
+
+
+```{r}
+# Boxplot
+ggplot(sentiment_df, aes(x = pen, y = sentiment, fill = pen)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "Sentiment Distribution by Pen Type",
+       x = "Source",
+       y = "Average Sentiment Score") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Density Plot
+ggplot(sentiment_df, aes(x = sentiment, fill = pen, color = pen)) +
+  geom_density(alpha = 0.4) +
+  labs(title = "Density Plot of Sentiment Scores",
+       x = "Average Sentiment Score",
+       y = "Density") +
+  theme_minimal()
+```
+
+
+### T-Test
+```{r sentiment-visualization, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+# Perform two-sample t-test
+t_test_result <- t.test(bic_sentiment$sentiment, sailor_sentiment$sentiment)
+
+# Visualize Results
+print(t_test_result)
+```
+
+### Regression
+
+```{r linear-regression-sentiment-pen, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+
+# Fit linear regression
+model <- lm(sentiment ~ pen, data = sentiment_df)
+
+# Visualize Results
+summary(model)
+
+# Create plot
+ggplot(sentiment_df, aes(x = pen, y = sentiment, color = pen)) +
+  geom_jitter(width = 0.2, alpha = 0.2) +  # Adds scattered points with slight horizontal spread
+  stat_summary(fun = mean, geom = "point", size = 4, color = "black") +  # Group means
+  stat_smooth(method = "lm", se = FALSE, aes(group = 1), color = "red") +  # Regression line
+  labs(title = "Linear Regression: Sentiment by Pen",
+       x = "Pen",
+       y = "Average Sentiment Score") +
+  theme_minimal()
+```
+
+
+### Chi-square-test
+```{r chi-square-test-with-plot, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+
+# Combine and label sentiment data
+bic_sentiment <- data.frame(sentiment = quanteda::docvars(bic_corpus, "ave_sentiment"),
+                            pen = "Bic")
+sailor_sentiment <- data.frame(sentiment = quanteda::docvars(sailor_corpus, "ave_sentiment"),
+                               pen = "Sailor")
+
+sentiment_df <- bind_rows(bic_sentiment, sailor_sentiment)
+
+# Convert to categorical: Positive / Negative
+sentiment_df <- sentiment_df %>%
+  mutate(polarity = ifelse(sentiment >= 0, "Positive", "Negative"))
+
+# Chi-square test
+table_data <- table(sentiment_df$pen, sentiment_df$polarity)
+print(table_data)
+
+chi_result <- chisq.test(table_data)
+print(chi_result)
+
+# Visualization: bar plot
+ggplot(sentiment_df, aes(x = pen, fill = polarity)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(title = "Proportion of Sentiment Polarity by Pen",
+       x = "Pen",
+       y = "Percentage of Comments",
+       fill = "Sentiment") +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
